@@ -61,7 +61,7 @@ class Wallet(models.Model):
 @receiver(post_save, sender=User)
 def create_user_wallet(sender, instance, created, **kwargs):
     if created:
-        Wallet.objects.create(user=instance)
+        Wallet.objects.get_or_create(user=instance)
 
 
 class LedgerEntry(models.Model):
@@ -108,3 +108,46 @@ def transfer_funds(from_wallet, to_wallet, amount, reference=""):
             reference=reference,
             description=f"Transfer from {from_wallet.user.email}"
         )
+
+
+class BorrowerProfile(models.Model):
+    KYC_STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('VERIFIED', 'Verified'),
+        ('REJECTED', 'Rejected'),
+    )
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, limit_choices_to={'role': 'BORROWER'})
+    business_name = models.CharField(max_length=255, blank=True, default='')
+    business_type = models.CharField(max_length=100, blank=True, null=True)
+    business_age = models.PositiveIntegerField(blank=True, null=True)
+    kyc_status = models.CharField(max_length=10, choices=KYC_STATUS_CHOICES, default='PENDING')
+    credit_score = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.business_name or 'No Business Name'}"
+
+
+@receiver(post_save, sender=User)
+def create_borrower_profile(sender, instance, created, **kwargs):
+    if created and instance.role == 'BORROWER':
+        BorrowerProfile.objects.get_or_create(user=instance)
+
+class InvestorProfile(models.Model):
+    RISK_LEVEL_CHOICES = (
+        ('LOW', 'Low'),
+        ('MEDIUM', 'Medium'),
+        ('HIGH', 'High'),
+    )
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, limit_choices_to={'role': 'INVESTOR'})
+    risk_appetite = models.CharField(max_length=10, choices=RISK_LEVEL_CHOICES, default='MEDIUM')
+    total_invested = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.risk_appetite}"
+
+@receiver(post_save, sender=User)
+def create_investor_profile(sender, instance, created, **kwargs):
+    if created and instance.role == 'INVESTOR':
+        InvestorProfile.objects.get_or_create(user=instance)

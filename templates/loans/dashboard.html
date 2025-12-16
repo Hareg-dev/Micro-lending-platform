@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head><title>Loan Dashboard</title></head>
+<body>
+    <h2>Loan Dashboard</h2>
+    
+    <h3>Applications</h3>
+    {% for app in applications %}
+        <div>
+            <p>${{ app.amount }} - {{ app.status }} - {{ app.created_at }}</p>
+            {% if user.role == 'INVESTOR' and app.status == 'PENDING' %}
+                <button onclick="approveApp({{ app.id }})">Approve</button>
+            {% endif %}
+        </div>
+    {% endfor %}
+    
+    <h3>Active Loans</h3>
+    {% for loan in loans %}
+        <div>
+            <p>Loan #{{ loan.id }} - ${{ loan.principal }} - {{ loan.status }}</p>
+        </div>
+    {% endfor %}
+    
+    <script>
+    function approveApp(appId) {
+        fetch(`/loans/approve/${appId}/`, {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}})
+        .then(r => r.json())
+        .then(data => {
+            if(data.success) location.reload();
+            else alert(data.error);
+        });
+    }
+    </script>
+</body>
+</html>

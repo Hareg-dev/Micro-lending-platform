@@ -12,10 +12,7 @@ class UserAdmin(admin.ModelAdmin):
     search_fields = ('email',)
 
 
-@receiver(post_save, sender=User)
-def create_user_wallet(sender, instance, created, **kwargs):
-    if created:
-        Wallet.objects.create(user=instance)
+# Wallet creation moved to models.py to avoid duplication
 
 from .models import Wallet, LedgerEntry
 
@@ -28,3 +25,17 @@ class LedgerAdmin(admin.ModelAdmin):
     list_display = ('wallet', 'transaction_type', 'amount', 'timestamp', 'reference')
 
 
+from .models import BorrowerProfile, InvestorProfile
+
+@admin.register(BorrowerProfile)
+class BorrowerProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'business_name', 'kyc_status', 'credit_score')
+    list_filter = ('kyc_status',)
+    search_fields = ('user__email', 'business_name')
+
+
+@admin.register(InvestorProfile)
+class InvestorProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'risk_appetite', 'total_invested')
+    list_filter = ('risk_appetite',)
+    search_fields = ('user__email',)
