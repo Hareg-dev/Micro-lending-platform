@@ -43,7 +43,8 @@ def approve_loan(application, investor, interest_rate=Decimal('12.00')):
         application.save()
         
         # Create repayment schedule
-        create_repayment_schedule(loan)
+        from .repayment_engine import generate_repayment_schedule
+        generate_repayment_schedule(loan)
         
         # Send notifications
         from notifications.services import notify_loan_approved

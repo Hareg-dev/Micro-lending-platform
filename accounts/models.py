@@ -49,9 +49,20 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class Wallet(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE"
+        FROZEN = "FROZEN"
+
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    currency = models.CharField(max_length=10, default='USD')
+    balance = models.DecimalField(max_digits=14, decimal_places=2, default=0.00)
+    locked_balance = models.DecimalField(max_digits=14, decimal_places=2, default=0.00)
+    currency = models.CharField(max_length=10, default='ETB')
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def available_balance(self):
+        return self.balance - self.locked_balance
 
     def __str__(self):
         return f"{self.user.email} - {self.balance} {self.currency}"
@@ -65,19 +76,25 @@ def create_user_wallet(sender, instance, created, **kwargs):
 
 
 class LedgerEntry(models.Model):
-    DEBIT = 'DEBIT'
-    CREDIT = 'CREDIT'
-    TRANSACTION_TYPES = (
-        (DEBIT, 'Debit'),
-        (CREDIT, 'Credit'),
-    )
+    class Type(models.TextChoices):
+        DEPOSIT = "DEPOSIT"
+        WITHDRAWAL = "WITHDRAWAL"
+        LOAN_DISBURSEMENT = "LOAN_DISBURSEMENT"
+        LOAN_REPAYMENT = "LOAN_REPAYMENT"
+        DEBIT = "DEBIT"
+        CREDIT = "CREDIT"
 
-    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE)
-    transaction_type = models.CharField(max_length=6, choices=TRANSACTION_TYPES)
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    reference = models.CharField(max_length=255, blank=True)
+    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    entry_type = models.CharField(max_length=30, choices=Type.choices, default=Type.CREDIT)
+    transaction_type = models.CharField(max_length=6, choices=[('DEBIT', 'Debit'), ('CREDIT', 'Credit')], default='CREDIT')
+    reference = models.CharField(max_length=100)
     description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.wallet.user.email} - {self.transaction_type} - {self.amount}"
@@ -92,7 +109,8 @@ def transfer_funds(from_wallet, to_wallet, amount, reference=""):
         from_wallet.save()
         LedgerEntry.objects.create(
             wallet=from_wallet,
-            transaction_type=LedgerEntry.DEBIT,
+            transaction_type='DEBIT',
+            entry_type=LedgerEntry.Type.WITHDRAWAL,
             amount=amount,
             reference=reference,
             description=f"Transfer to {to_wallet.user.email}"
@@ -103,7 +121,8 @@ def transfer_funds(from_wallet, to_wallet, amount, reference=""):
         to_wallet.save()
         LedgerEntry.objects.create(
             wallet=to_wallet,
-            transaction_type=LedgerEntry.CREDIT,
+            transaction_type='CREDIT',
+            entry_type=LedgerEntry.Type.DEPOSIT,
             amount=amount,
             reference=reference,
             description=f"Transfer from {from_wallet.user.email}"

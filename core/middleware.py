@@ -1,4 +1,4 @@
-from django.http import HttpResponseTooManyRequests
+from django.http import HttpResponse
 from django.core.cache import cache
 from django.conf import settings
 import time
@@ -17,7 +17,7 @@ class RateLimitMiddleware:
         # Check rate limit for sensitive endpoints
         if self.is_sensitive_endpoint(request.path):
             if not self.check_rate_limit(ip):
-                return HttpResponseTooManyRequests("Rate limit exceeded")
+                return HttpResponse("Rate limit exceeded", status=429)
         
         response = self.get_response(request)
         return response

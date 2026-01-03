@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Investment Marketplace</h2>
+
+{% if user.role == 'BORROWER' %}
+<div class="text-center">
+    <a href="{% url 'loan_request' %}" class="btn btn-success">Request a Loan</a>
+</div>
+{% endif %}
+
+<h3>Available Loan Listings</h3>
+
+{% if listings %}
+    {% for listing in listings %}
+    <div class="card">
+        <h4>Loan Request - {{ listing.loan_request.requested_amount }} ETB</h4>
+        <p><strong>Borrower:</strong> {{ listing.loan_request.borrower.full_name }}</p>
+        <p><strong>Purpose:</strong> {{ listing.loan_request.purpose }}</p>
+        <p><strong>Duration:</strong> {{ listing.loan_request.duration_months }} months</p>
+        <p><strong>Interest Rate:</strong> {{ listing.interest_rate }}% annual</p>
+        <p><strong>Risk Grade:</strong> 
+            <span style="color: {% if listing.loan_request.risk_grade == 'A' %}green{% elif listing.loan_request.risk_grade == 'B' %}orange{% else %}red{% endif %}">
+                {{ listing.loan_request.risk_grade }}
+            </span>
+        </p>
+        <p><strong>Credit Score:</strong> {{ listing.loan_request.credit_score }}</p>
+        <p><strong>Funding Progress:</strong> {{ listing.funded_amount }} / {{ listing.loan_request.requested_amount }} ETB ({{ listing.funding_progress|floatformat:1 }}%)</p>
+        
+        {% if user.role == 'INVESTOR' and listing.is_open %}
+        <form method="post" action="{% url 'place_bid' listing.id %}" style="display: inline;">
+            {% csrf_token %}
+            <input type="number" name="amount" placeholder="Bid amount (min {{ listing.min_bid }})" min="{{ listing.min_bid }}" max="{{ listing.loan_request.requested_amount }}" required style="width: 200px;">
+            <button type="submit" class="btn">Place Bid</button>
+        </form>
+        {% elif not listing.is_open %}
+        <p style="color: green;"><strong>FULLY FUNDED</strong></p>
+        {% endif %}
+    </div>
+    {% endfor %}
+{% else %}
+    <p>No loan listings available at the moment.</p>
+{% endif %}
+
+{% if user.role == 'BORROWER' %}
+<h3>My Loan Requests</h3>
+{% for request in user.loanrequest_set.all %}
+<div class="card">
+    <p><strong>Amount:</strong> {{ request.requested_amount }} ETB</p>
+    <p><strong>Status:</strong> {{ request.get_status_display }}</p>
+    <p><strong>Credit Score:</strong> {{ request.credit_score }} (Grade: {{ request.risk_grade }})</p>
+    <p><strong>Submitted:</strong> {{ request.created_at }}</p>
+</div>
+{% endfor %}
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Profile - {{ user.full_name }}</h2>
+
+<div class="card">
+    <h3>Account Information</h3>
+    <p><strong>Email:</strong> {{ user.email }}</p>
+    <p><strong>Role:</strong> {{ user.get_role_display }}</p>
+    <p><strong>Wallet Balance:</strong> {{ user.wallet.balance }} ETB</p>
+    {% if user.wallet.locked_balance > 0 %}
+        <p><strong>Locked Balance:</strong> {{ user.wallet.locked_balance }} ETB</p>
+    {% endif %}
+</div>
+
+{% if user.role == 'BORROWER' %}
+<div class="card">
+    <h3>Business Profile</h3>
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label>Business Name:</label>
+            <input type="text" name="business_name" value="{{ user.borrowerprofile.business_name }}">
+        </div>
+        
+        <div class="form-group">
+            <label>Business Type:</label>
+            <input type="text" name="business_type" value="{{ user.borrowerprofile.business_type }}">
+        </div>
+        
+        <div class="form-group">
+            <label>Business Age (years):</label>
+            <input type="number" name="business_age" value="{{ user.borrowerprofile.business_age }}">
+        </div>
+        
+        <p><strong>KYC Status:</strong> {{ user.borrowerprofile.get_kyc_status_display }}</p>
+        <p><strong>Credit Score:</strong> {{ user.borrowerprofile.credit_score }}</p>
+        
+        <button type="submit" class="btn">Update Profile</button>
+    </form>
+</div>
+
+{% elif user.role == 'INVESTOR' %}
+<div class="card">
+    <h3>Investment Profile</h3>
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label>Risk Appetite:</label>
+            <select name="risk_appetite">
+                <option value="LOW" {% if user.investorprofile.risk_appetite == 'LOW' %}selected{% endif %}>Low Risk</option>
+                <option value="MEDIUM" {% if user.investorprofile.risk_appetite == 'MEDIUM' %}selected{% endif %}>Medium Risk</option>
+                <option value="HIGH" {% if user.investorprofile.risk_appetite == 'HIGH' %}selected{% endif %}>High Risk</option>
+            </select>
+        </div>
+        
+        <p><strong>Total Invested:</strong> {{ user.investorprofile.total_invested }} ETB</p>
+        
+        <button type="submit" class="btn">Update Profile</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="text-center">
+    <a href="{% url 'marketplace' %}" class="btn btn-success">Go to Marketplace</a>
+    <a href="{% url 'loan_dashboard' %}" class="btn">View Dashboard</a>
+</div>
+{% endblock %}
